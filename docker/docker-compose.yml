@@ -1,0 +1,137 @@
+version: "3.7"
+
+services:
+  hadoop-namenode:
+    image: datasource/hadoop-namenode-${HADOOP_VERSION}:latest
+    container_name: bda-hadoop-namenode
+    networks:
+      - bda-network
+    volumes:
+      - bda-hadoop-namenode-volume:/var/local/hadoop/hdfs/namenode
+  hadoop-datanode:
+    image: datasource/hadoop-datanode-${HADOOP_VERSION}:latest
+    container_name: bda-hadoop-datanode
+    depends_on:
+      - hadoop-namenode
+    networks:
+      - bda-network
+    volumes:
+      - bda-hadoop-datanode-volume:/var/local/hadoop/hdfs/datanode
+  hadoop-resourcemanager:
+    image: datasource/hadoop-yarn-resourcemanager-${HADOOP_VERSION}:latest
+    container_name: bda-hadoop-yarn-resourcemanager
+    depends_on:
+      - hadoop-namenode
+    networks:
+      - bda-network
+  spark:
+    image: datasource/spark-${SPARK_VERSION}:latest
+    container_name: bda-spark
+    depends_on:
+      - hadoop-namenode
+    networks:
+      - bda-network
+  zookeeper-master:
+    image: datasource/zookeeper-${ZOOKEEPER_VERSION}:latest
+    container_name: bda-zookeeper-master
+    networks:
+      - bda-network
+    volumes:
+      - bda-zookeeper-volume:/data/zookeeper
+    expose:
+      - "2181"
+
+  hbase-master:
+    image: datasource/hbase-master-${HBASE_VERSION}:latest
+    container_name: bda-hbase-master
+    depends_on:
+      - hadoop-namenode
+      - zookeeper-master
+    networks:
+      - bda-network
+  hbase-regionserver:
+    image: datasource/hbase-regionserver-${HBASE_VERSION}:latest
+    container_name: bda-hbase-regionserver
+    depends_on:
+      - hadoop-namenode
+      - zookeeper-master
+    networks:
+      - bda-network
+  livy:
+    image: datasource/livy-${LIVY_VERSION}:latest
+    container_name: bda-livy
+    depends_on:
+      - hadoop-resourcemanager
+      - zookeeper-master
+      - spark
+    networks:
+      - bda-network
+  postgres:
+    image: datasource/postgres-11
+    container_name: bda-postgres
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+    volumes:
+      - bda-postgres-volume:/var/lib/postgresql/data
+    networks:
+      - bda-network
+  keycloak:
+    image: jboss/keycloak:${KEYCLOAK_VERSION}
+    container_name: bda-keycloak
+    ports: 
+      - 0.0.0.0:8080:8080
+      #- 0.0.0.0:8443:8443
+    environment: 
+      KEYCLOAK_USER: ${KEYCLOAK_USER}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASS}
+      LANG: en_US.UTF-8
+    depends_on:
+      - postgres
+    #volumes:
+      #- type: bind
+      #  source: ${SSL_FILES}
+      #  target: /etc/x509/https
+      #  read_only: true
+    networks:
+      - bda-network
+  bda:
+    image: datasource/bda-devel:latest
+    container_name: bda-controller
+    ports:
+      - 0.0.0.0:9999:9999
+    depends_on:
+      - postgres
+      - hadoop-namenode
+      - spark
+      - hbase-master
+      - livy
+    volumes:
+      - type: bind
+        source: ${BDA_CODE_FOLDER}
+        target: /code
+      #- type: bind
+      #  source: ${BDA_CERT}
+      #  target: /resources/cert.p12
+    networks:
+      - bda-network
+  solr:
+    container_name: bda-solr
+    image: solr:${SOLR_VERSION}
+    ports:
+     - "8983:8983"
+    environment:
+      - ZK_HOST=zookeeper-master
+    networks:
+      - bda-network
+    depends_on:
+      - zookeeper-master
+volumes:
+  bda-postgres-volume:
+  bda-hadoop-namenode-volume:
+  bda-hadoop-datanode-volume:
+  bda-zookeeper-volume:
+
+networks:
+  bda-network:
+    driver: bridge
+    external: false

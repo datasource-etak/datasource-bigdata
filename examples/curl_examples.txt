@@ -1,0 +1,70 @@
+// 0. Define supported execution languages and engines and upload initial shared recipes
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" http://localhost:9999/api/datastore/init && echo
+
+// 1. Create Pub/Sub connector
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @newconnector.json http://localhost:9999/api/connectors && echo
+
+// 2. Create repository database
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @newrepo.json http://localhost:9999/api/datastore && echo
+
+// 3. Bootstrap dimension tables
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @master_data.json http://localhost:9999/api/datastore/{slug}/boot && echo
+
+// 4. Create message type to subscribe to (returns message_id)
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @msgtype.json http://localhost:9999/api/messages/{slug} && echo
+
+// 5. Add new recipe (returns recipe_id)
+curl -ik -X POST -H "Content-type:application/json" -d @recipe.json http://localhost:9999/api/recipes/{slug}/ && echo
+
+// 6. Upload recipe executable
+curl -ik -X PUT -H "Content-type:application/octet-stream" --data-binary @recipe.py http://localhost:9999/api/recipes/{slug}/{recipe_id}/recipe.py
+
+// 7. Create a new job (message-triggered or cron) (returns job_id)
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @job.json http://localhost:9999/api/jobs/{slug} && echo
+
+// Extras
+// Store message in eventlog
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @msg.json http://localhost:9999/api/datastore/{slug}/ && echo
+
+// Get data from eventlog
+curl -ik -X GET "http://localhost:9999/api/datastore/{slug}/entries?type=rows&n=-1" && echo
+curl -ik -X GET "http://localhost:9999/api/datastore/{slug}/select?filters=antenna_id:1;message_type:temperature" && echo
+
+// Get data from dimension tables
+curl -ik -X GET "http://localhost:9999/api/datastore/{slug}/dtable?tableName=antennas&filters=id:1" && echo
+
+// Print dimension tables schema
+curl -ik -X GET http://localhost:9999/api/datastore/{slug}/schema && echo
+
+// Get registered repositories
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/datastore
+
+// Get Pub/Sub connectors
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/connectors
+
+// Associate message with external connector
+curl -ik -X PUT -H "Content-type:application/json" -H "Accept:application/json" "http://localhost:9999/api/messages/{slug}/{message_id}?connector_id={connector_id}&external_datasource={datasource_name}"
+
+// Get shared recipes
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/sharedrecipes
+
+// Create a recipe from an existing shared recipe
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @recipe_args.json http://localhost:9999/api/recipes/{slug}/{shared_recipe_id}?name=myrecipe && echo
+
+// Get available execution languages
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/xlanguages
+
+// Get available execution engines
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/xengines
+
+// Get Jobs
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/jobs/{slug}/
+
+// Get MessageTypes
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/messages/{slug}/
+
+// Get Recipes
+curl -ik -X GET -H "Accept:application/json" http://localhost:9999/api/recipes/{slug}/
+
+// Test job triggering through pub-sub message
+curl -ik -X POST -H "Content-type:application/json" -H "Accept:application/json" --data @message.json http://localhost:9999/api/messages/{slug}/insert && echo

@@ -1,0 +1,18 @@
+ARG SPARK_VERSION
+FROM datasource/spark-${SPARK_VERSION}
+
+RUN \
+    # Make directories.
+    mkdir -p /code /usr/share/man/man1 /usr/share/man/man7 /uploads /results && \
+    # Install packages.
+    apt-get update && apt-get install -y \
+        postgresql-client \
+        maven \
+        tmux \
+        vim \
+        curl
+
+# Set working directory.
+WORKDIR /code
+
+CMD [ "/bin/sh", "-c", "while true; do sleep 1d; done"]

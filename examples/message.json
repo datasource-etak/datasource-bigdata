@@ -1,0 +1,6 @@
+{
+    "message_type": "temperature",
+    "slug": "slug",
+    "antenna_id": 1,
+    "payload": "some data"
+}

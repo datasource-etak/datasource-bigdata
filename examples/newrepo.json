@@ -1,0 +1,7 @@
+{
+  "slug" : "slug",
+  "name" : "repository_name",
+  "description" : "repository_desc",
+  "dbname" : "repository_db",
+  "connectorId" : 1
+}

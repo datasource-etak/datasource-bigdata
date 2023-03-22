@@ -1,0 +1,105 @@
+{
+	"clientId":"bda_client",
+	"surrogateAuthRequired":false,
+	"enabled":true,
+	"clientAuthenticatorType":"client-secret",
+	"redirectUris":[],
+	"webOrigins":[],
+	"notBefore":0,
+	"bearerOnly":false,
+	"consentRequired":false,
+	"standardFlowEnabled":true,
+	"implicitFlowEnabled":true,
+	"directAccessGrantsEnabled":true,
+	"serviceAccountsEnabled":true,
+	"authorizationServicesEnabled":true,
+	"redirectUris":["/api/*"],
+	"publicClient":false,
+	"secret":"bda_secret",
+	"frontchannelLogout":false,
+	"protocol":"openid-connect",
+	"authorizationSettings": {
+		"allowRemoteResourceManagement": true,
+		"policyEnforcementMode": "ENFORCING",
+		"resources": [
+		{
+			"name": "Admin API resource",
+			"ownerManagedAccess": false,
+			"displayName": "Admin API resource",
+			"attributes": {},
+			"uris": [
+				"/xengines*",
+			"/sharedrecipes/*",
+			"/jobs/*",
+			"/datastore*",
+			"/xlanguages*",
+			"/connectors/*",
+			"/recipes/*",
+			"/messages/**",
+			"/datastore/*/schema*",
+			"/datastore/*/boot*",
+			"/datastore/*/dtable?*",
+			"/users/*"
+			]
+		},
+		{
+			"name": "DataSource resource",
+			"ownerManagedAccess": false,
+			"displayName": "DataSource resource",
+			"attributes": {},
+			"uris": [
+				"/datastore/datasource",
+				"/kpi/datasource/**",
+				"/datastore/datasource/select*",
+				"/datastore/datasource/entries*",
+				"/datastore/datasource/",
+				"/datastore/datasource/dtable*"
+			]
+		}
+		],
+		"policies": [
+			{
+				"name": "Admin policy",
+				"type": "role",
+				"logic": "POSITIVE",
+				"decisionStrategy": "UNANIMOUS",
+				"config": {
+					"roles": "[{\"id\":\"admin\",\"required\":false}]"
+				}
+			},
+			{
+				"name": "Admin permission",
+				"type": "resource",
+				"logic": "POSITIVE",
+				"decisionStrategy": "UNANIMOUS",
+				"config": {
+					"resources": "[\"Admin API resource\"]",
+					"applyPolicies": "[\"Admin policy\"]"
+				}
+			},
+			{
+				"name": "DataSource policy",
+				"type": "role",
+				"logic": "POSITIVE",
+				"decisionStrategy": "UNANIMOUS",
+				"config": {
+					"roles": "[{\"id\":\"datasource_user\",\"required\":false}]"
+				}
+			},
+			{
+				"name": "DataSource permission",
+				"type": "resource",
+				"logic": "POSITIVE",
+				"decisionStrategy": "UNANIMOUS",
+				"config": {
+					"resources": "[\"DataSource resource\"]",
+					"applyPolicies": "[\"DataSource policy\"]"
+				}
+			}
+
+		],
+		"scopes": []
+	}
+}
+
+

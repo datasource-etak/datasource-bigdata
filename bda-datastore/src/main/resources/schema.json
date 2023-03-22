@@ -1,0 +1,30 @@
+{
+	"add-field": [
+		{   "name":"dataset_name",
+			"type":"text_general",
+			"stored":true,
+			"indexed":true,
+			"uninvertible":true,
+			"multiValued":false },
+		{
+			"name":"dataset_description",
+			"type":"text_general",
+			"stored":true,
+			"indexed":true,
+			"uninvertible":true,
+			"multiValued":false,
+			"large":true },
+		{
+			"name":"source_id",
+			"type":"pint",
+			"stored":true,
+			"docValues":true },
+		{
+			"name":"dataset_id",
+			"type":"string",
+			"indexed":true,
+			"stored":true,
+			"required":true,
+			"multiValued":false}
+	]
+}

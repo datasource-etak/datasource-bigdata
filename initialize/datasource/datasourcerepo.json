@@ -1,0 +1,7 @@
+{
+  "slug" : "datasource",
+  "name" : "DataSource repository",
+  "description" : "BigOptiBase project data repository",
+  "dbname" : "datasource_db",
+  "connectorId" : 1
+}
