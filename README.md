@@ -43,12 +43,8 @@ The steps to setup the Keycloak server, are:
 ```
 4. Now you have initialized an admin user and a datasource_user role to create more users on demand.
 
-Create Secure Users
---------------
-Visit security/README.md for more information
 
-
-Start the BigOptiBase BDA server
+Start the DataSource BDA server
 --------------------------------
 1. Compile and run the BDA server:
 ```
