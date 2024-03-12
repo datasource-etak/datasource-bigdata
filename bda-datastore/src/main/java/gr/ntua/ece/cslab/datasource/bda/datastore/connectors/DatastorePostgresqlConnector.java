@@ -133,14 +133,20 @@ public class DatastorePostgresqlConnector implements DatastoreConnector {
                 if (data.size()>0) {
                     String values = "";
                     String insertTableSQL = "INSERT INTO " + table.getName() + " (";
+                    String updateStr = "";
                     for (KeyValue element : columns) {
                         insertTableSQL += element.getKey() + ",";
                         if (element.getValue().equals("jsonb"))
                             values += "?::jsonb,";
                         else
                             values += "?,";
+
+                        if (!(element.getKey().equals(table.getSchema().getPrimaryKey()))) {
+                            updateStr += " " + element.getKey() + " = EXCLUDED." + element.getKey() + ",";
+                        }
                     }
-                    insertTableSQL = insertTableSQL.substring(0, insertTableSQL.length() - 1) + ") VALUES (" + values.substring(0, values.length() - 1) + ");";
+                    insertTableSQL = insertTableSQL.substring(0, insertTableSQL.length() - 1) + ") VALUES (" + values.substring(0, values.length() - 1) + ")" ;
+                    insertTableSQL = insertTableSQL + " ON CONFLICT (" + table.getSchema().getPrimaryKey() + ") DO UPDATE SET " + updateStr.substring(0, updateStr.length() - 1) + ";";
 
                     PreparedStatement prepst = conn.getConnection().prepareStatement(insertTableSQL);
                     for (Tuple tuple : data) {
@@ -265,6 +271,7 @@ public class DatastorePostgresqlConnector implements DatastoreConnector {
                 q = q.substring(0, q.length() - 4) + ";";
             }
             ResultSet rs = st.executeQuery(q);
+            LOGGER.log(Level.INFO, "Fetching from master data with query : " + q);
             ResultSetMetaData rsmd = rs.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
             while (rs.next()) {

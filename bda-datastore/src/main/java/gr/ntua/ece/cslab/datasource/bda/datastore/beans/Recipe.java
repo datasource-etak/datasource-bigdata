@@ -94,6 +94,9 @@ public class Recipe implements Serializable {
     private final static String GET_SHARED_RECIPE_BY_ID =
         "SELECT * FROM shared_recipes WHERE id = ?;";
 
+    private final static String GET_SHARED_RECIPE_BY_NAME =
+            "SELECT * FROM shared_recipes WHERE name = ?;";
+
     private final static String GET_SHARED_RECIPES =
         "SELECT * FROM shared_recipes;";
 
@@ -585,6 +588,37 @@ public class Recipe implements Serializable {
                 } else {
                     throw new Exception("Mismatch between shared recipe arguments and provided arguments.");
                 }
+                return shRecipe;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        throw new SQLException("Shared Recipe object not found.");
+    }
+
+    public static Recipe getFromSharedRecipesByName(String name) throws Exception {
+        PostgresqlConnector connector = (PostgresqlConnector ) SystemConnector.getInstance().getBDAconnector();
+        Connection connection = connector.getConnection();
+
+        try {
+            PreparedStatement statement = connection.prepareStatement(GET_SHARED_RECIPE_BY_NAME);
+            statement.setString(1, name);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                Recipe shRecipe = new Recipe(
+                        resultSet.getString("name"),
+                        resultSet.getString("description"),
+                        resultSet.getInt("language_id"),
+                        resultSet.getString("executable_path"),
+                        resultSet.getInt("engine_id"),
+                        new Gson().fromJson(new JsonParser().parse(resultSet.getString("args")).getAsJsonObject(), RecipeArguments.class)
+                );
+
+                shRecipe.id = resultSet.getInt("id");
+
                 return shRecipe;
             }
         } catch (SQLException e) {

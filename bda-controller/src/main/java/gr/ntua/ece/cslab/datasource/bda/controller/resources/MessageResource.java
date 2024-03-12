@@ -16,7 +16,7 @@
 
 package gr.ntua.ece.cslab.datasource.bda.controller.resources;
 
-import gr.ntua.ece.cslab.datasource.bda.controller.connectors.MessageHandler;
+import gr.ntua.ece.cslab.datasource.bda.controller.handlers.statics.MessageHandler;
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.Message;
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.MessageType;
 

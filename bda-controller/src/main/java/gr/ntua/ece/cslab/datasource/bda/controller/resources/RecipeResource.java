@@ -96,20 +96,20 @@ public class RecipeResource {
     @PostMapping(value = "{slug}/{recipeId}",
             consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE},
             produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<?> insert(@PathVariable("slug") String slug,
+    public ResponseEntity<Integer> insert(@PathVariable("slug") String slug,
                            @PathVariable("recipeId") int recipeId,
                            @RequestParam("name") String name,
                            @RequestBody RecipeArguments args) {
-        String details = "";
+        int details = -1;
         Recipe r;
 
         try {
             r = Recipe.createFromSharedRecipe(recipeId, name, args);
             r.save(slug);
-            details = Integer.toString(r.getId());
+            details = r.getId();
         } catch (Exception e) {
             e.printStackTrace();
-            return new ResponseEntity<>("Could not create Recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(-1, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return ResponseEntity.ok(details);

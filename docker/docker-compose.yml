@@ -51,7 +51,7 @@ services:
       - bda-network
   hbase-regionserver:
     image: datasource/hbase-regionserver-${HBASE_VERSION}:latest
-    container_name: bda-hbase-regionserver
+    container_name: bda-hbase-worker
     depends_on:
       - hadoop-namenode
       - zookeeper-master
@@ -123,6 +123,8 @@ services:
       - ZK_HOST=zookeeper-master
     networks:
       - bda-network
+    volumes:
+      - bda-solr:/var/solr
     depends_on:
       - zookeeper-master
 volumes:
@@ -130,6 +132,7 @@ volumes:
   bda-hadoop-namenode-volume:
   bda-hadoop-datanode-volume:
   bda-zookeeper-volume:
+  bda-solr:
 
 networks:
   bda-network:

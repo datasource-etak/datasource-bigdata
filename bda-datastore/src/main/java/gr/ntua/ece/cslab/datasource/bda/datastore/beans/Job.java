@@ -28,7 +28,7 @@ import java.lang.UnsupportedOperationException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Job implements Serializable {
+public class Job implements Serializable, Comparable<Job> {
     private final static Logger LOGGER = Logger.getLogger(Job.class.getCanonicalName());
     private final static int DEFAULT_VECTOR_SIZE = 10;
 
@@ -525,5 +525,10 @@ public class Job implements Serializable {
             connection.rollback();
             throw e;
         }
+    }
+
+    @Override
+    public int compareTo(Job o) {
+        return -(new Integer(id)).compareTo(o.id);
     }
 }

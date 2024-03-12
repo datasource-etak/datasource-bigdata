@@ -6,8 +6,8 @@ import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.DbInfo;
 import gr.ntua.ece.cslab.datasource.bda.datastore.StorageBackend;
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.DatasourceUser;
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.DimensionTable;
-import gr.ntua.ece.cslab.datasource.bda.datastore.beans.DimensionTableSchema;
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.MasterData;
+import org.apache.commons.lang.StringUtils;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -24,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import scala.Int;
 
 import javax.ws.rs.core.Response;
 import java.sql.SQLException;
@@ -46,6 +45,14 @@ public class DatasourceUserResource {
      */
     @PostMapping(value = "signup", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> create(@RequestBody DatasourceUser datasourceUser) {
+
+        if (!StringUtils.isAlphanumeric(datasourceUser.getUsername())) {
+            return new ResponseEntity<>("Only alphanumeric characters are allowed in username.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!StringUtils.isAlphanumeric(datasourceUser.getPassword())) {
+            return new ResponseEntity<>("Only alphanumeric characters are allowed in password.", HttpStatus.BAD_REQUEST);
+        }
 
         datasourceUser.setUsername(datasourceUser.getUsername().toLowerCase());
         try {
@@ -146,6 +153,7 @@ public class DatasourceUserResource {
         resourceRepresentation.setDisplayName("DataSource " + datasourceUser.getUsername() + " resource");
         resourceRepresentation.setAttributes(new HashMap<>());
         Set<String> uris = new HashSet();
+        /*
         uris.add("/datastore/" + datasourceUser.getUsername());
         uris.add("/kpi/" + datasourceUser.getUsername() + "/**");
         uris.add("/datastore/" + datasourceUser.getUsername() + "/select*");
@@ -154,6 +162,30 @@ public class DatasourceUserResource {
         uris.add("/datastore/" + datasourceUser.getUsername() + "/dtable*");
         uris.add("/datastore/" + datasourceUser.getUsername() + "/download*");
         uris.add("/datastore/" + datasourceUser.getUsername() + "/search*");
+        */
+        /*
+         * Dataset resource uris
+         */
+        uris.add("/datasets/" + datasourceUser.getUsername());
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/online/search*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/download*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/fetch/by-id*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/fetch/by-alias*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/description*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/description/");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/description/by-id*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/description/by-alias*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/schema/by-id*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/join*");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/status/by-id**");
+        uris.add("/datasets/" + datasourceUser.getUsername() + "/sourceinfo*");
+
+        uris.add("/workflows/" + datasourceUser.getUsername() + "/types");
+        uris.add("/workflows/" + datasourceUser.getUsername() + "/types*");
+        uris.add("/workflows/" + datasourceUser.getUsername() + "/**");
+
+
+
         resourceRepresentation.setUris(uris);
 
         response = authorization.resources().create(resourceRepresentation);
@@ -213,8 +245,18 @@ public class DatasourceUserResource {
         dt.setSchema(StorageBackend.datasetDTStructure);
         dt.setData(new ArrayList<>());
 
+        DimensionTable dt1 = new DimensionTable();
+        dt1.setName("workflow_history_store");
+        dt1.setSchema(StorageBackend.workflowDTStructure);
+        dt1.setData(new ArrayList<>());
+
+        DimensionTable dt2 = new DimensionTable();
+        dt2.setName("operator_history_store");
+        dt2.setSchema(StorageBackend.operatorDTStructure);
+        dt2.setData(new ArrayList<>());
+
         MasterData md = new MasterData();
-        md.setTables(Arrays.asList(new DimensionTable[]{dt}));
+        md.setTables(Arrays.asList(new DimensionTable[]{dt, dt1, dt2}));
 
         ResponseEntity<?> bootstrapResponseEntity = resource.bootstrap(datasourceUser.getUsername(), md);
         LOGGER.log(Level.INFO, "Initiated dataset log table for user : " + datasourceUser.getUsername());

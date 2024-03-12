@@ -16,12 +16,17 @@
 
 package gr.ntua.ece.cslab.datasource.bda.datastore.beans;
 
+import org.json.JSONObject;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @XmlRootElement(name = "data")
 @XmlAccessorType(XmlAccessType.PUBLIC_MEMBER)
@@ -48,5 +53,28 @@ public class Tuple implements Serializable {
                 reduce((a, b) -> a + "," + b).
                 get();
         return row;
+    }
+
+
+    public Map<String, Object> toMap() {
+        return this.tuple.stream().collect(
+                Collectors.toMap(
+                        KeyValue::getKey,
+                        KeyValue::getValue,
+                        (a, b) -> b,
+                        () -> new HashMap<>(tuple.size())
+                )
+        );
+    }
+
+    public Map<String, Object> toMap(JSONObject jsonObject) {
+        return this.tuple.stream().collect(
+                Collectors.toMap(
+                        KeyValue::getKey,
+                        x->x.castValue(jsonObject),
+                        (a, b) -> b,
+                        () -> new HashMap<>(tuple.size())
+                )
+        );
     }
 }

@@ -5,6 +5,10 @@ ARG HADOOP_VERSION
 ARG HADOOP_PREFIX=/usr/local/hadoop
 ARG HADOOP_URL=https://archive.apache.org/dist/hadoop/core/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
 
+RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list
+RUN sed -i 's|security.debian.org|archive.debian.org/|g' /etc/apt/sources.list
+RUN sed -i '/stretch-updates/d' /etc/apt/sources.list
+
 RUN \
     # Install dependencies.
     DEBIAN_FRONTEND=noninteractive \

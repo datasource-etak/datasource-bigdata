@@ -16,6 +16,9 @@
 
 package gr.ntua.ece.cslab.datasource.bda.datastore.beans;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.json.JSONObject;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -75,5 +78,15 @@ public class KeyValue implements Serializable{
      */
     public void setValue(String value) {
         this.value = value;
+    }
+
+    protected Object castValue(JSONObject info) {
+        if (info.getString(key).equals("int") || info.getString(key).equals("integer")) {
+            return Integer.valueOf(value);
+        } else if (info.getString(key).equals("double")) {
+            return Double.valueOf(value);
+        } else {
+            return value;
+        }
     }
 }

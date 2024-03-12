@@ -58,6 +58,14 @@ RUN \
     gpg --verify /tmp/spark.tgz.asc && \
     tar -C "${SPARK_PREFIX}" --strip=1 -xzf /tmp/spark.tgz && \
     rm /tmp/spark.tgz*
+
+RUN apt-get install --yes --no-install-recommends python3-pip
+
+RUN python3 -m pip install --upgrade pip
+
+RUN python3 -m pip install numpy pandas scikit-learn linearmodels
+
+RUN python3 -m pip install statsmodels scipy
     
 # Add hbase configuration files.
 ADD ./hbase-site.xml "${SPARK_PREFIX}/conf/"

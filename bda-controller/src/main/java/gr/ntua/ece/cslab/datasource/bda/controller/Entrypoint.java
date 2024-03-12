@@ -130,6 +130,8 @@ public class Entrypoint {
 
         SystemConnector.init(args[0]);
         StorageBackend.setDatasetDTStructure();
+        StorageBackend.setOperatorDTStructure();
+        StorageBackend.setWorkflowDTStructure();
 
         // SIGTERM hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

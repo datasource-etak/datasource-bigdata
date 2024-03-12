@@ -29,11 +29,12 @@ import gr.ntua.ece.cslab.datasource.bda.common.storage.connectors.SolrConnector;
 import gr.ntua.ece.cslab.datasource.bda.datastore.StorageBackend;
 
 import gr.ntua.ece.cslab.datasource.bda.datastore.beans.*;
-import gr.ntua.ece.cslab.datasource.bda.datastore.online.beans.Dataset;
+import gr.ntua.ece.cslab.datasource.bda.datastore.datasets.online.beans.Dataset;
 
 import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.Source;
-import gr.ntua.ece.cslab.datasource.bda.datastore.online.beans.Filter;
-import gr.ntua.ece.cslab.datasource.bda.datastore.online.beans.TimeSeriesData;
+import gr.ntua.ece.cslab.datasource.bda.datastore.datasets.online.beans.Filter;
+import gr.ntua.ece.cslab.datasource.bda.datastore.datasets.online.beans.TimeSeriesData;
+import org.apache.commons.lang.StringUtils;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.json.JSONArray;
@@ -108,46 +109,57 @@ public class DatastoreResource {
                 e.printStackTrace();
                 new ResponseEntity<>("Failed to get HDFS connector.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
+
+            org.apache.hadoop.fs.Path outputFilePath = null;
+
+            String[] recipe_names = new String[] {"RecipeDataLoader.py", "algorithmic_library.py"};
             org.apache.hadoop.fs.FileSystem fs = connector.getFileSystem();
-
-            InputStream fileInStream = classLoader.getResourceAsStream("RecipeDataLoader.py");
-
-            byte[] recipeBytes = new byte[0];
-            try {
-                recipeBytes = IOUtils.toByteArray(fileInStream);
-
-                fileInStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                new ResponseEntity<>("Failed to create stream of Recipes library file.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            // Create HDFS file path object.
-            org.apache.hadoop.fs.Path outputFilePath =
-                    new org.apache.hadoop.fs.Path("/RecipeDataLoader.py");
-
-            // Write to HDFS.
+            InputStream fileInStream = null;
             org.apache.hadoop.fs.FSDataOutputStream outputStream = null;
-            try {
-                outputStream = fs.create(
-                        outputFilePath
-                );
-            } catch (IOException e) {
-                e.printStackTrace();
-                new ResponseEntity<>("Failed to create Recipes library file in HDFS.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
 
-            try {
-                outputStream.write(recipeBytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-                new ResponseEntity<>("Failed to upload Recipes library to HDFS.", HttpStatus.INTERNAL_SERVER_ERROR);
-            } finally {
+            for (String recipe_name :recipe_names) {
+
+
+
+                fileInStream = classLoader.getResourceAsStream(recipe_name);
+
+                byte[] recipeBytes = new byte[0];
                 try {
-                    outputStream.close();
+                    recipeBytes = IOUtils.toByteArray(fileInStream);
+
+                    fileInStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
+                    new ResponseEntity<>("Failed to create stream of Recipes library file.", HttpStatus.INTERNAL_SERVER_ERROR);
                 }
+
+                // Create HDFS file path object.
+                outputFilePath =
+                        new org.apache.hadoop.fs.Path("/" + recipe_name);
+
+                // Write to HDFS.
+                try {
+                    outputStream = fs.create(
+                            outputFilePath
+                    );
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    new ResponseEntity<>("Failed to create Recipes library file in HDFS.", HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+
+                try {
+                    outputStream.write(recipeBytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    new ResponseEntity<>("Failed to upload Recipes library to HDFS.", HttpStatus.INTERNAL_SERVER_ERROR);
+                } finally {
+                    try {
+                        outputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
             }
 
             try {
@@ -233,6 +245,39 @@ public class DatastoreResource {
                 r.save_as_shared();
                 r = new Recipe("Binomial Logistic Regression prediction", "Simple binary classification prediction using Spark MLlib",
                         1, "hdfs:///shared_recipes/binomial_logistic_regression_predict.py", 2, args);
+                r.save_as_shared();
+
+                args = new RecipeArguments();
+                args_list = new LinkedList<>();
+                args_list.add("renaming");
+                args_list.add("type_cast");
+                args.setOther_args(args_list);
+                input_df_args_list = new LinkedList<>();
+                input_df_args_list.add("dataset1");
+                args.setMessage_types(input_df_args_list);
+
+                r = new Recipe("Init Join Sequence", "Export first table to be joined in a join sequence",
+                        1, "hdfs:///shared_recipes/init_dataframe_join.py", 2, args);
+                r.save_as_shared();
+
+                args_list.add("join_type");
+                args_list.add("join_keys");
+
+                args.setOther_args(args_list);
+                r = new Recipe("Chain Join Sequence", "Chain a join sequence",
+                        1, "hdfs:///shared_recipes/chain_dataframe_join.py", 2, args);
+                r.save_as_shared();
+
+                args = new RecipeArguments();
+                args_list = new LinkedList<>();
+                args_list.add("message_type");
+                args_list.add("slug");
+                args_list.add("alias");
+                args.setOther_args(args_list);
+
+
+                r = new Recipe("Store Join Sequence", "Store join result to hbase",
+                        1, "hdfs:///shared_recipes/store_dataframe_join.py", 2, args);
                 r.save_as_shared();
 
             } catch (Exception e) {
@@ -714,8 +759,19 @@ public class DatastoreResource {
             @PathVariable("slug") String slug,
             @PathVariable("source") String source_id,
             @PathVariable("dataset") String dataset_id,
-            @RequestBody List<Filter> filters
+            @RequestBody List<Filter> filters,
+            @RequestBody String alias
     ) {
+
+        if (!StringUtils.isAlphanumeric(alias.replace("_", "")))
+            return new ResponseEntity<>("Alias only allows alphanumeric and the '_' character", HttpStatus.BAD_REQUEST);
+
+        if (getTable("dataset_history_store",
+                "alias:" + alias,
+                slug).size() > 0) {
+            return new ResponseEntity<>("Dataset alias has been used for another dataset", HttpStatus.CONFLICT);
+        }
+
 
         String filter_store = Base64.getEncoder().encodeToString((new JSONArray(filters)).toString().getBytes());
 
@@ -739,13 +795,13 @@ public class DatastoreResource {
         String msg_type_name = uuid;
         JSONObject format_json = new JSONObject();
         format_json.append("message_type", uuid);
+        format_json.append("alias", alias);
         format_json.append("scn_slug", slug);
         format_json.append("source_id", "string");
         format_json.append("dataset_id", "string");
         format_json.append("time", "string");
         format_json.append("value", "double");
         for (Filter filter : filters) {
-            System.out.println(filter.toString());
             format_json.append(filter.getFid().getId(), "string");
         }
         format_json.append("payload", "");
@@ -768,7 +824,7 @@ public class DatastoreResource {
 
         String status;
         try {
-            status = TimeSeriesData.downloadAndStoreData(uuid, slug, dataset, filters);
+            status = TimeSeriesData.downloadAndStoreData(uuid, slug, dataset, alias, filters);
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>("Error on downloading and storing the data", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -780,6 +836,7 @@ public class DatastoreResource {
         dt.setSchema(StorageBackend.datasetDTStructure);
         List<KeyValue> data = Arrays.asList(new KeyValue[]{
                 new KeyValue("uuid", uuid),
+                new KeyValue("alias", alias),
                 new KeyValue("dataset_id", dataset_id),
                 new KeyValue("dataset_name", dataset.getDataset_name()),
                 new KeyValue("dataset_description", dataset.getDataset_description()),

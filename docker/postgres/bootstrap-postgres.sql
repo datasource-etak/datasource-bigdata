@@ -16,7 +16,6 @@ CREATE DATABASE keycloak WITH OWNER keycloak;
 
 GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
 
-
 \connect bda_db
 
 CREATE TABLE db_info (
@@ -80,6 +79,49 @@ CREATE TABLE sources (
 );
 
 ALTER TABLE sources OWNER TO datasource;
+
+CREATE TABLE operator_parameters (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    type                TEXT,
+    operator_id         INTEGER,
+    restrictions        JSON
+    );
+
+ALTER TABLE operator_parameters OWNER TO datasource;
+
+CREATE TABLE operators (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    shared_recipe_id    INTEGER,
+    stage_id            INTEGER
+    );
+
+ALTER TABLE operators OWNER TO datasource;
+
+CREATE TABLE workflow_stages (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    ordering            INTEGER,
+    minimum_selection         INTEGER,
+    maximum_selection       INTEGER,
+    workflow_type_id            INTEGER,
+    allow_duplicate_operators_with_other_parameters BOOLEAN
+);
+
+ALTER TABLE workflow_stages OWNER TO datasource;
+
+CREATE TABLE workflow_types (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    library             TEXT,
+    needs_target        BOOLEAN
+);
+
+ALTER TABLE workflow_types OWNER TO datasource;
 
 
 
@@ -147,3 +189,46 @@ CREATE TABLE sources (
 );
 
 ALTER TABLE sources OWNER TO datasource;
+
+CREATE TABLE operator_parameters (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    type                TEXT,
+    operator_id         INTEGER,
+    restrictions        JSON
+    );
+
+ALTER TABLE operator_parameters OWNER TO datasource;
+
+CREATE TABLE operators (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    shared_recipe_id    INTEGER,
+    stage_id            INTEGER
+    );
+
+ALTER TABLE operators OWNER TO datasource;
+
+CREATE TABLE workflow_stages (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    ordering            INTEGER,
+    minimum_selection         INTEGER,
+    maximum_selection       INTEGER,
+    workflow_type_id            INTEGER,
+    allow_duplicate_operators_with_other_parameters BOOLEAN
+);
+
+ALTER TABLE workflow_stages OWNER TO datasource;
+
+CREATE TABLE workflow_types (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT,
+    description         TEXT,
+    library             TEXT,
+    needs_target        BOOLEAN
+);
+
+ALTER TABLE workflow_types OWNER TO datasource;

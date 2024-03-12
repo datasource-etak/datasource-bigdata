@@ -298,6 +298,7 @@ public class MessageType implements Serializable {
             statement.setString(1, name);
 
             ResultSet resultSet = statement.executeQuery();
+            LOGGER.log(Level.INFO, statement.toString());
 
             if (resultSet.next()) {
                 MessageType msg = new MessageType(

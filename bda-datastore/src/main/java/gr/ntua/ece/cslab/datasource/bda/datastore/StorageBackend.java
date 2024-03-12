@@ -35,6 +35,10 @@ public class StorageBackend {
     private DatastoreConnector DTconnector;
     public static DimensionTableSchema datasetDTStructure;
 
+    public static DimensionTableSchema workflowDTStructure;
+
+    public static DimensionTableSchema operatorDTStructure;
+
     /** The StorageBackend constructor creates two new connections, one for the EventLog FS and one for the Dimension
      *  tables FS, using the FS parameters that are provided as input Strings. **/
     public StorageBackend(String slug) throws SystemConnectorException {
@@ -45,19 +49,64 @@ public class StorageBackend {
     public static void setDatasetDTStructure() {
         if (datasetDTStructure == null) {
             datasetDTStructure = new DimensionTableSchema();
-            String[] columnNames = {"uuid", "dataset_id", "dataset_name", "dataset_description", "source_name", "associated_filter", "status"};
+            String[] columnNames = {"uuid", "alias", "dataset_id", "dataset_name", "dataset_description", "source_name", "associated_filter", "status"};
             datasetDTStructure.setColumnNames(Arrays.asList(columnNames));
             KeyValue[] columnTypes = {
                     new KeyValue("uuid","text"),
+                    new KeyValue("alias", "text"),
                     new KeyValue("dataset_id", "text"),
                     new KeyValue("dataset_name", "text"),
                     new KeyValue("dataset_description", "text"),
                     new KeyValue("source_name", "text"),
                     new KeyValue("associated_filter", "text"),
-                    new KeyValue("status", "text")
+                    new KeyValue("status", "text"),
+                    new KeyValue("timestamp", "text")
             };
             datasetDTStructure.setColumnTypes(Arrays.asList(columnTypes));
             datasetDTStructure.setPrimaryKey("uuid");
+        }
+    }
+
+    public static void setWorkflowDTStructure() {
+        if (workflowDTStructure == null) {
+            workflowDTStructure = new DimensionTableSchema();
+            String[] columnNames = {"uuid", "alias", "description", "workflow_type_id", "dataset_id",  "features", "target", "status", "result"};
+            workflowDTStructure.setColumnNames(Arrays.asList(columnNames));
+            KeyValue[] columnTypes = {
+                    new KeyValue("uuid","text"),
+                    new KeyValue("alias", "text"),
+                    new KeyValue("description", "text"),
+                    new KeyValue("workflow_type_id", "integer"),
+                    new KeyValue("dataset_id", "text"),
+                    new KeyValue("features", "text"),
+                    new KeyValue("target", "text"),
+                    new KeyValue("status", "text"),
+                    new KeyValue("result", "text"),
+                    new KeyValue("submitted_at", "text"),
+                    new KeyValue("completed_at", "text")
+            };
+            workflowDTStructure.setColumnTypes(Arrays.asList(columnTypes));
+            workflowDTStructure.setPrimaryKey("uuid");
+        }
+    }
+
+    public static void setOperatorDTStructure() {
+        if (operatorDTStructure == null) {
+            operatorDTStructure = new DimensionTableSchema();
+            String[] columnNames = {"uuid", "operator_id", "parameters", "result", "status", "workflow_id"};
+            operatorDTStructure.setColumnNames(Arrays.asList(columnNames));
+            KeyValue[] columnTypes = {
+                    new KeyValue("uuid","text"),
+                    new KeyValue("operator_id", "integer"),
+                    new KeyValue("parameters", "text"),
+                    new KeyValue("result","text"),
+                    new KeyValue("status","text"),
+                    new KeyValue("workflow_id","text"),
+                    new KeyValue("submitted_at", "text"),
+                    new KeyValue("completed_at", "text")
+            };
+            operatorDTStructure.setColumnTypes(Arrays.asList(columnTypes));
+            operatorDTStructure.setPrimaryKey("uuid");
         }
     }
 

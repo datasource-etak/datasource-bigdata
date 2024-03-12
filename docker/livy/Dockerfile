@@ -38,6 +38,8 @@ ENV LIVY_HOME=${LIVY_PREFIX}
 ADD ./livy.conf "${LIVY_PREFIX}/conf/"
 ADD ./livy-client.conf "${LIVY_PREFIX}/conf/"
 
+RUN rm ${LIVY_PREFIX}/jars/curator-client-2.7.1.jar
+
 # Add entrypoint.
 ADD ./entrypoint.sh /
 RUN chmod +x /entrypoint.sh

@@ -16,9 +16,11 @@
 
 package gr.ntua.ece.cslab.datasource.bda.analyticsml.runners;
 
+import gr.ntua.ece.cslab.datasource.bda.analyticsml.beans.JobStage;
 import gr.ntua.ece.cslab.datasource.bda.common.Configuration;
 import gr.ntua.ece.cslab.datasource.bda.common.storage.SystemConnectorException;
 import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.Connector;
+import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.ExecutionEngine;
 import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.ExecutionLanguage;
 import gr.ntua.ece.cslab.datasource.bda.common.storage.beans.DbInfo;
 import gr.ntua.ece.cslab.datasource.bda.common.storage.connectors.PostgresqlConnector;
@@ -48,6 +50,12 @@ public class LivyRunner extends ArgumentParser implements Runnable {
     public String language;
     private String sessionId;
 
+    private boolean succeeded = false;
+
+    private String runnerResult = "";
+
+    private JobStage stage = new JobStage();
+
     public LivyRunner(Recipe recipe, MessageType msgInfo,
                       String messageId, Job job, String slug) throws Exception{
 
@@ -75,12 +83,49 @@ public class LivyRunner extends ArgumentParser implements Runnable {
         this.sessionId = String.valueOf(job.getSessionId());
     }
 
+    public LivyRunner(String slug, Job job, JobStage _stage) throws Exception{
+
+        this.stage = _stage;
+        this.slug = slug;
+        this.messageId = "";
+        this.msgInfo = null;
+        this.recipe = Recipe.getRecipeById(slug, job.getRecipeId());
+        this.job = job;
+        configuration = Configuration.getInstance();
+
+        Client client = ClientBuilder.newClient();
+        resource = client.target(configuration.execEngine.getLivyURL());
+
+        String[] recipe_export = recipe.getExecutablePath().split("\\.");
+        recipe_export = recipe_export[recipe_export.length - 2].split("/");
+        this.recipeClass = recipe_export[recipe_export.length - 1];
+
+        try {
+            this.language = ExecutionLanguage.getLanguageById(recipe.getLanguageId()).getName();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE,"Getting the execution language has failed. Abort creating runner.");
+            throw e;
+        }
+
+        this.sessionId = String.valueOf(job.getSessionId());
+    }
+
+    public boolean isSucceeded() {
+        return succeeded;
+    }
+
+    public String getRunnerResult() {
+        return runnerResult;
+    }
+
     public String createSession(){
         String kind = null, dataLoaderLibrary = null, sparkFiles = null, sessionId;
+        String workflowLibrary = null;
         if (language.matches("python")){
             kind = "pyspark";
             dataLoaderLibrary = "hdfs:///RecipeDataLoader.py";
             sparkFiles = "spark.yarn.dist.pyFiles";
+            workflowLibrary = "hdfs:///algorithmic_library.py";
         }
 
         Invocation.Builder request = resource.path("/sessions").request();
@@ -91,6 +136,7 @@ public class LivyRunner extends ArgumentParser implements Runnable {
         List<String> files = new ArrayList<>();
         //files.add(recipe.getExecutablePath());
         files.add(dataLoaderLibrary);
+        files.add(workflowLibrary);
         // For client mode with old configuration
         //data.put("files", files);
         //if (configuration.execEngine.getSparkConfJars() != null) {
@@ -108,6 +154,7 @@ public class LivyRunner extends ArgumentParser implements Runnable {
             jar_names.add("hdfs:///"+jar_name_list[jar_name_list.length-1]);
         }	
         classpath.put("spark.jars", String.join(",", jar_names)+ ",local:///usr/local/hbase/lib/hbase-client-1.4.10.jar,local:///usr/local/hbase/lib/htrace-core-3.1.0-incubating.jar,local:///usr/local/hbase/lib/hbase-common-1.4.10.jar,local:///usr/local/hbase/lib/hbase-server-1.4.10.jar,local:///usr/local/hbase/lib/guava-12.0.1.jar,local:///usr/local/hbase/lib/hbase-protocol-1.4.10.jar,local:///usr/local/hbase/lib/metrics-core-2.2.0.jar");
+        classpath.put("spark.hadoop.validateOutputSpecs", "false");
 
         if (!classpath.isEmpty())
             data.put("conf", classpath);
@@ -193,7 +240,7 @@ public class LivyRunner extends ArgumentParser implements Runnable {
 
         StringBuilder builder = new StringBuilder();
         builder.append("spark.sparkContext.addFile('").append(recipe.getExecutablePath()).append("'); ");
-        builder.append("import RecipeDataLoader; import ").append(recipeClass).append("; ");
+        builder.append("import RecipeDataLoader; import algorithmic_library; import ").append(recipeClass).append("; ");
 
         StringBuilder arguments = new StringBuilder();
 
@@ -219,16 +266,19 @@ public class LivyRunner extends ArgumentParser implements Runnable {
         List<String> eventlog_messages = recipe.getArgs().getMessage_types();
         for (String eventlog_message: eventlog_messages) {
             MessageType msg = MessageType.getMessageByName(this.slug, eventlog_message);
+            String eventlog_message_res = "dataset_" +eventlog_message.replace("-", "");
             List<String> columns = msg.getMessageColumns();
-            builder.append(eventlog_message).append(" = RecipeDataLoader.fetch_from_eventlog(spark, '")
+            builder.append(eventlog_message_res).append(" = RecipeDataLoader.fetch_from_eventlog(spark, '")
                     .append(info.getElDbname()).append("','")
                     .append(eventlog_message).append("','")
                     .append(columns).append("'); ");
-            arguments.append(",").append(eventlog_message);
+            arguments.append(",").append(eventlog_message_res);
         }
 
         String args = arguments.toString();
-        if (msgInfo == null) {
+        LOGGER.log(Level.INFO, "Args : " + args);
+        if ((msgInfo == null) && (!args.isEmpty())) {
+            LOGGER.log(Level.INFO, "Args : " + args);
             args = arguments.toString().substring(1);
         }
 
@@ -248,7 +298,13 @@ public class LivyRunner extends ArgumentParser implements Runnable {
         if (!(this.job.getDependJobId() == null))
             arguments.append(", result_").append(this.job.getDependJobId());
 
-        builder.append("result_").append(this.job.getId()).append(" = ").append(recipeClass).append(".run(spark, ").append(arguments).append("); ");
+        builder.append("result_").append(this.job.getId()).append(" = ").append(recipeClass).append(".run(spark, ");
+
+        String args2 = arguments.toString();
+        if (recipe.getArgs().getMessage_types().isEmpty() && recipe.getArgs().getDimension_tables().isEmpty() && (msgInfo == null))
+            args2 = args2.substring(1);
+
+        builder.append(args2).append("); ");
         if (this.job.getResultStorage().equals("kpidb")){
 
             builder.append("RecipeDataLoader.save_result_to_kpidb('")
@@ -311,7 +367,9 @@ public class LivyRunner extends ArgumentParser implements Runnable {
             e.printStackTrace();
             return;
         }
-        
+
+
+        LOGGER.log(Level.INFO, "Code created : " + code);
         // Create session if it is required
         if (job.getJobType().matches("batch") && sessionId.matches("null") && job.getDependJobId() == null){
             LOGGER.log(Level.INFO,"Creating session for batch job..");
@@ -385,6 +443,12 @@ public class LivyRunner extends ArgumentParser implements Runnable {
         } else {
             String output = new JSONObject(new JSONObject(result.get("output").toString()).get("data").toString()).get("text/plain").toString();
             LOGGER.log(Level.INFO, "Job result: " + output);
+
+            succeeded = true;
+            runnerResult = output;
+
+            stage.setSucceeded(true);
+            stage.setResult(output);
         }
 
         // Delete session
@@ -394,8 +458,16 @@ public class LivyRunner extends ArgumentParser implements Runnable {
                     deleteSession(sessionId);
             }
             else {
-                job.setSessionId(Integer.valueOf(sessionId));
-                job.setChildrenSessionId(slug);
+                System.out.println(stage.isSucceeded());
+                if (job.getJobType().matches("batch") && !stage.isSucceeded()){
+                    System.out.println(1);
+                    deleteSession(sessionId);
+                }
+                else {
+                    System.out.println(2);
+                    job.setSessionId(Integer.valueOf(sessionId));
+                    job.setChildrenSessionId(slug);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

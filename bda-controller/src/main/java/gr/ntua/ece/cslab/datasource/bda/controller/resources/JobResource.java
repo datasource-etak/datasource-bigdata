@@ -47,10 +47,10 @@ public class JobResource {
     @PostMapping(value = "{slug}",
             consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE},
             produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<?> insert(@PathVariable("slug") String slug,
+    public ResponseEntity<Integer> insert(@PathVariable("slug") String slug,
                            @RequestBody Job j) {
 
-        String details = "";
+        int details = -1;
         j.setJobType();
 
         try {
@@ -58,17 +58,17 @@ public class JobResource {
             if (j.getDependJobId() != null) {
                 parentJob = Job.getJobById(slug, j.getDependJobId());
                 if (parentJob == null)
-                    return new ResponseEntity<>("Could not insert new Job depending on non-existing Job.", HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>(-1, HttpStatus.BAD_REQUEST);
             }
 
-            if ((j.getMessageTypeId() == null) && (j.getScheduleInfo() == null))
-                return new ResponseEntity<>("Could not insert new Job. Job must have schedule info or be connected to a message type", HttpStatus.BAD_REQUEST);
+            //if ((j.getMessageTypeId() == null) && (j.getScheduleInfo() == null))
+            //    return new ResponseEntity<>("Could not insert new Job. Job must have schedule info or be connected to a message type", HttpStatus.BAD_REQUEST);
 
             if ((j.getResultStorage() == null) || !(j.getResultStorage().matches("kpidb") || j.getResultStorage().matches("pubsub") || (j.getResultStorage().matches("hdfs"))))
-                return new ResponseEntity<>("Could not insert new Job. Job result storage must be either 'kpidb', or 'pubsub' or 'hdfs'", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(-1, HttpStatus.BAD_REQUEST);
 
             j.save(slug);
-            details = Integer.toString(j.getId());
+            details = j.getId();
             LOGGER.log(Level.INFO, "Inserted job.");
 
             Recipe r = Recipe.getRecipeById(slug, j.getRecipeId());
@@ -113,7 +113,7 @@ public class JobResource {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return new ResponseEntity<>("Could not insert new Job.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(-1, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return ResponseEntity.ok(details);
